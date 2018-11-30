@@ -1,0 +1,94 @@
+---
+title: "Benford Law Fraud Detection"
+author: "Jianhao Yan, Becky, Megha, Yifu Dong"
+date: "11/25/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Taxable Incomes 1978
+The dataset "Taxable Incomes 1978" was particularly interesting for Benford Analysis. This is because, the United States Revenue Act of 1978 came into effect. The Act made tax cuts on individual income taxes and corporate taxes to sustain the then state of recovery. We check whether or not this data follows Benford's Law.
+
+```{r}
+library(benford.analysis)
+data("taxable.incomes.1978")
+summary(taxable.incomes.1978$taxIncomes)
+bfd.ti <- benford(taxable.incomes.1978$taxIncomes)
+plot(bfd.ti)
+bfd.ti
+```
+
+The digits distribution plots show that the digits from the data follow Benford's Law. But, the chi-squared value is 5109.9 for 89 degrees of freedom, which is much larger than the critical value of 112.022, for 0.05 significance. We generate a random benford distribution and perform Benford's analysis on it to compare and see the difference.
+
+```{r}
+library(BenfordTests)
+set.seed(99)
+benf <- rbenf(1000)
+bfd.bf <- benford(benf)
+plot(bfd.bf)
+bfd.bf
+```
+
+The chi-squared value is 92.882 for 89 degrees of freedom, which is well within the critical value of 112.022, for 0.05 significance.
+
+# 2000 Census Data
+```{r}
+library(benford.analysis)
+data(census.2000_2010)
+```
+
+##Benford.Analysis Package
+We use benford to find out potential fraud cases in this census data.
+```{r}
+bfd.cp <- benford(census.2000_2010$pop.2000,1)
+plot(bfd.cp, except=c("mantissa", "chi square", "abs diff", "second order"), multiple = T)
+
+# MAD value
+MAD(bfd.cp)
+
+# top 10 duplicates
+library(knitr)
+kable(duplicatesTable(bfd.cp)[1:10])
+```
+
+It's acceptable that at most three counties have the same population.
+
+The 'suspicious' observations according to Benford's Law:
+```{r}
+suspects <- getSuspects(bfd.cp, census.2000_2010)
+kable(suspects[c(1:10),c(1:4)])
+```
+
+The first digits ordered by the mains discrepancies from Benford's Law:
+```{r}
+kable(suspectsTable(bfd.cp, by="absolute.diff"))
+```
+```{r}
+#Chi-sqaure test 
+chisq(bfd.cp) 
+```
+The p-value is 0.27 so that we cannot reject null hypothesis, which means that the distances between data points and benford points are not significantly different.
+
+
+##BenfordTests Package
+```{r}
+
+#JP Sqaure test
+jpsq.benftest(x=census.2000_2010$pop.2000,digits = 2, pvalmethod = "simulate", pvalsims = 10000) 
+```
+Joenssen’s JP-square Test for Benford’s Law:
+The result signifys that the square correlation between signifd(census.2000_2010$pop.2000,2) and pbenf(2) is not zero.
+
+```{r}
+# Euclidean Distance Test for Benford’s Law
+edist.benftest(census.2000_2010$pop.2000)
+```
+"edist.benftest" takes any numerical vector reduces the sample to the specified number of signif- icant digits and performs a goodness-of-fit test based on the Euclidean distance between the first digits’ distribution and Benford’s distribution to assert if the data conforms to Benford’s law.
+
+
+The p-value is greater than 0.05 so that we can not reject the null hypothesis. Therefore, the goodness-of-fit test based on the Euclidean distance between the first digits' distribution and Benford's distribution shows the data does conform to Benford's law very well.
+
+##Conclusion
+Even though all the tests and plots we've done signify that our data follows well the Benford Law, we can't arbitrarily say that there are not frauds in these census observations.
